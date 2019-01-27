@@ -60,7 +60,7 @@ func main() {
 	}
 	fmt.Printf("%v\n", worldMap.worldMap)
 
-	player := Entity{
+	player := &Entity{
 		health: 10,
 		damage: 5,
 	}
@@ -70,12 +70,14 @@ func main() {
 		y: 0,
 	}
 
-	enemy := Entity{
+	enemy := &Entity{
 		health: 10,
 		damage: 5,
 	}
 
 	editPlayerPosition(worldMap, playerPosition)
-	fmt.Println("\n", player.health, enemy.health)
+	fmt.Println("Attacking...\n", player.health, enemy.health)
+	player.attack(enemy)
+	fmt.Println("Damage taken...\n", player.health, enemy.health)
 
 }
