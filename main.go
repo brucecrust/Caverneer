@@ -23,6 +23,7 @@ type Entity struct {
 type CombatEntity interface {
 	attack(CombatEntity)
 	takeDamage(int)
+	editPosition(*Map, int8, []int)
 }
 
 func (e *Entity) attack(target CombatEntity) {
@@ -41,10 +42,11 @@ func createWorldMap(xLength int, yLength int) [][]int8 {
 	return worldMap
 }
 
-func editPlayerPosition(worldMap *Map, playerPosition []int, graphicChar int8, xyMove []int) {
-	playerPosition[0] += xyMove[0]
-	playerPosition[1] += xyMove[1]
-	worldMap.worldMap[playerPosition[0]][playerPosition[1]] = graphicChar
+func (e *Entity) editPosition(worldMap *Map, graphicChar int8, xyMove []int) {
+	worldMap.worldMap[e.position[0]][e.position[1]] = 0
+	e.position[0] += xyMove[0]
+	e.position[1] += xyMove[1]
+	worldMap.worldMap[e.position[0]][e.position[1]] = graphicChar
 }
 
 func printWorldMap(worldMap [][]int8) {
@@ -76,6 +78,7 @@ func userInput(acceptableInput []string) string {
 			answer := inputList[0]
 			stringAnswer := string(answer)
 			fmt.Printf("Correct! Your answer was: %v\n", stringAnswer)
+			return stringAnswer
 
 		} else {
 			fmt.Printf("Which of the following commands did you mean?: %v \n", acceptableInput)
@@ -103,11 +106,13 @@ func main() {
 	}
 
 	enemy := &Entity{
-		health: 10,
-		damage: 5,
+		position:      []int{0, 0},
+		health:        10,
+		damage:        5,
+		graphicalChar: 2,
 	}
 
-	editPlayerPosition(worldMap, player.position, player.graphicalChar, []int{0, 1})
+	player.editPosition(worldMap, player.graphicalChar, []int{0, 1})
 	fmt.Printf("Adding player value to world map as `1`, at pos (0, 0)\n")
 	printWorldMap(worldMap.worldMap)
 
@@ -118,7 +123,17 @@ func main() {
 
 	fmt.Printf("Starting loop...\n")
 
-	fmt.Printf("Enter just enough input for your answer to be distinguished from the acceptableInput array.\n")
-	print("'Fire', 'Fireball', and 'Firestorm' are your choices\n")
-	userInput([]string{"fire", "fireball", "firestorm"})
+	for {
+		input := userInput([]string{"north", "south", "east", "west"})
+		if input == "north" {
+			player.editPosition(worldMap, player.graphicalChar, []int{-1, 0})
+		} else if input == "south" {
+			player.editPosition(worldMap, player.graphicalChar, []int{1, 0})
+		} else if input == "east" {
+			player.editPosition(worldMap, player.graphicalChar, []int{0, 1})
+		} else if input == "west" {
+			player.editPosition(worldMap, player.graphicalChar, []int{0, -1})
+		}
+		printWorldMap(worldMap.worldMap)
+	}
 }
