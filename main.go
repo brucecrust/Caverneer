@@ -43,7 +43,13 @@ func createWorldMap(xLength int, yLength int) [][]int8 {
 func editPlayerPosition(worldMap *Map, newPlayerPosition MapPoint) {
 	worldMap.playerPosition = newPlayerPosition
 	worldMap.worldMap[worldMap.playerPosition.x][worldMap.playerPosition.y] = 1
-	fmt.Printf("%v\n", worldMap.worldMap)
+}
+
+func printWorldMap(worldMap [][]int8) {
+	for i := range worldMap {
+		fmt.Println(worldMap[i])
+	}
+	fmt.Printf("\n")
 }
 
 func main() {
@@ -58,7 +64,7 @@ func main() {
 		},
 		worldMap: createWorldMap(mapLength.xLength, mapLength.yLength),
 	}
-	fmt.Printf("%v\n", worldMap.worldMap)
+	printWorldMap(worldMap.worldMap)
 
 	player := &Entity{
 		health: 10,
@@ -76,8 +82,11 @@ func main() {
 	}
 
 	editPlayerPosition(worldMap, playerPosition)
+	fmt.Printf("Adding player value to world map as `1`, at pos (0, 0)\n")
+	printWorldMap(worldMap.worldMap)
+
+	fmt.Printf("Starting combat...")
 	fmt.Println("Attacking...\n", player.health, enemy.health)
 	player.attack(enemy)
 	fmt.Println("Damage taken...\n", player.health, enemy.health)
-
 }
