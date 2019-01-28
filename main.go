@@ -1,21 +1,22 @@
 package main
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+)
 
 type MapLength struct {
 	xLength, yLength int
 }
-
-type MapPoint struct {
-	x, y int
-}
-
 type Map struct {
-	playerPosition MapPoint
-	worldMap       [][]int8
+	worldMap [][]int8
 }
 
 type Entity struct {
+	position       []int
+	graphicalChar  int8
 	health, damage int
 }
 
@@ -40,9 +41,10 @@ func createWorldMap(xLength int, yLength int) [][]int8 {
 	return worldMap
 }
 
-func editPlayerPosition(worldMap *Map, newPlayerPosition MapPoint) {
-	worldMap.playerPosition = newPlayerPosition
-	worldMap.worldMap[worldMap.playerPosition.x][worldMap.playerPosition.y] = 1
+func editPlayerPosition(worldMap *Map, playerPosition []int, graphicChar int8, xyMove []int) {
+	playerPosition[0] += xyMove[0]
+	playerPosition[1] += xyMove[1]
+	worldMap.worldMap[playerPosition[0]][playerPosition[1]] = graphicChar
 }
 
 func printWorldMap(worldMap [][]int8) {
@@ -52,6 +54,36 @@ func printWorldMap(worldMap [][]int8) {
 	fmt.Printf("\n")
 }
 
+func userInput(acceptableInput []string) string {
+	for {
+		var inputList []string
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		input := scanner.Text()
+
+		for x := range acceptableInput {
+			if strings.HasPrefix(acceptableInput[x], strings.ToLower(input)) {
+				inputList = append(inputList, acceptableInput[x])
+			}
+		}
+
+		// Enter just enough input to distinguish between items in the acceptableInput array.
+		if len(inputList) == 0 {
+			fmt.Printf("Please input another command, I do not understand.\n")
+			continue
+
+		} else if len(inputList) == 1 {
+			answer := inputList[0]
+			stringAnswer := string(answer)
+			fmt.Printf("Correct! Your answer was: %v\n", stringAnswer)
+
+		} else {
+			fmt.Printf("Which of the following commands did you mean?: %v \n", acceptableInput)
+			continue
+		}
+	}
+}
+
 func main() {
 	mapLength := MapLength{
 		xLength: 10,
@@ -59,21 +91,15 @@ func main() {
 	}
 
 	worldMap := &Map{
-		playerPosition: MapPoint{
-			0, 0,
-		},
 		worldMap: createWorldMap(mapLength.xLength, mapLength.yLength),
 	}
 	printWorldMap(worldMap.worldMap)
 
 	player := &Entity{
-		health: 10,
-		damage: 5,
-	}
-
-	playerPosition := MapPoint{
-		x: 0,
-		y: 0,
+		position:      []int{0, 0},
+		health:        10,
+		damage:        5,
+		graphicalChar: 1,
 	}
 
 	enemy := &Entity{
@@ -81,7 +107,7 @@ func main() {
 		damage: 5,
 	}
 
-	editPlayerPosition(worldMap, playerPosition)
+	editPlayerPosition(worldMap, player.position, player.graphicalChar, []int{0, 1})
 	fmt.Printf("Adding player value to world map as `1`, at pos (0, 0)\n")
 	printWorldMap(worldMap.worldMap)
 
@@ -89,4 +115,10 @@ func main() {
 	fmt.Println("Attacking...\n", player.health, enemy.health)
 	player.attack(enemy)
 	fmt.Println("Damage taken...\n", player.health, enemy.health)
+
+	fmt.Printf("Starting loop...\n")
+
+	fmt.Printf("Enter just enough input for your answer to be distinguished from the acceptableInput array.\n")
+	print("'Fire', 'Fireball', and 'Firestorm' are your choices\n")
+	userInput([]string{"fire", "fireball", "firestorm"})
 }
