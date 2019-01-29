@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 )
@@ -22,6 +23,10 @@ type CombatEntity interface {
 	attack(CombatEntity)
 	takeDamage(int)
 	editPosition(*Map, []int) bool
+}
+
+type Enemy interface {
+	randomizeMovement(*Map, *Entity)
 }
 
 func (e *Entity) attack(target CombatEntity) {
@@ -100,6 +105,29 @@ func userInput(acceptableInput []string) string {
 	}
 }
 
+func (e *Entity) randomizeMovement(worldMap *Map, player *Entity) []int {
+	movementArray := []int{-1, 0, 1}
+	x := movementArray[rand.Intn(len(movementArray))]
+	y := movementArray[rand.Intn(len(movementArray))]
+
+	for {
+		if e.position[0]+x < worldMap.areaOfMap[0]-1 || e.position[0]+x > 0 {
+			if e.position[1]+y < worldMap.areaOfMap[1]-1 || e.position[0]+y > 0 {
+				break
+			} else {
+				y = movementArray[rand.Intn(len(movementArray))]
+				continue
+			}
+		} else {
+			x = movementArray[rand.Intn(len(movementArray))]
+			continue
+		}
+	}
+
+	fmt.Println(e.position[0]+x, e.position[1]+y)
+	return []int{x, y}
+}
+
 func main() {
 	xLength := 5
 	yLength := 5
@@ -116,7 +144,7 @@ func main() {
 	}
 
 	enemy := &Entity{
-		position:    []int{0, 0},
+		position:    []int{1, 1},
 		health:      10,
 		damage:      5,
 		graphicChar: 2,
@@ -124,6 +152,11 @@ func main() {
 
 	fmt.Printf("Adding player value to world map as `1`, at pos (0, 0)\n")
 	player.editPosition(worldMap, []int{0, 0})
+
+	fmt.Printf("Adding enemy value to world map as `2`\n")
+	enemyPos := enemy.randomizeMovement(worldMap, player)
+	enemy.editPosition(worldMap, enemyPos)
+
 	fmt.Printf("Starting combat...")
 	fmt.Println("Attacking...\n", player.health, enemy.health)
 	player.attack(enemy)
@@ -133,6 +166,9 @@ func main() {
 	fmt.Printf("\n")
 	printWorldMap(worldMap)
 	for {
+		enemyPos = enemy.randomizeMovement(worldMap, player)
+		enemy.editPosition(worldMap, enemyPos)
+
 		input := userInput([]string{"north", "south", "east", "west"})
 		if input == "north" {
 			player.editPosition(worldMap, []int{-1, 0})
