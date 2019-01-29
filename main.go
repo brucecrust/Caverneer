@@ -14,6 +14,7 @@ type Map struct {
 }
 
 type Entity struct {
+	name           string
 	position       []int
 	graphicChar    int8
 	health, damage int
@@ -22,7 +23,8 @@ type Entity struct {
 type CombatEntity interface {
 	attack(CombatEntity)
 	takeDamage(int)
-	editPosition(*Map, []int) bool
+	editPosition(*Map, []int)
+	entityOnBlankTile(*Map) bool
 }
 
 type Enemy interface {
@@ -45,26 +47,38 @@ func createWorldMap(xLength int, yLength int) [][]int8 {
 	return worldMap
 }
 
-func (e *Entity) editPosition(worldMap *Map, xyMove []int) bool {
-	entityCanMove := true
-
-	if e.position[1]+xyMove[1] > worldMap.areaOfMap[1]-1 || e.position[1]+xyMove[1] < 0 {
-		entityCanMove = false
-		fmt.Printf("Cannot move this way...\n")
+func (e *Entity) mapCollisionDetection(worldMap *Map, movementArray []int) bool {
+	if e.position[0]+movementArray[0] > worldMap.areaOfMap[0]-1 || e.position[0]+movementArray[0] < 0 {
+		return false
 	}
 
-	if e.position[0]+xyMove[0] > worldMap.areaOfMap[0]-1 || e.position[0]+xyMove[0] < 0 {
-		entityCanMove = false
-		fmt.Printf("Cannot move this way...\n")
+	if e.position[1]+movementArray[1] > worldMap.areaOfMap[1]-1 || e.position[1]+movementArray[1] < 0 {
+		return false
 	}
 
-	if entityCanMove == true {
+	return true
+}
+
+func (e *Entity) editPosition(worldMap *Map, movementArray []int) {
+	canMove := e.mapCollisionDetection(worldMap, movementArray)
+	for !canMove {
+		if e.name == "player" {
+			fmt.Printf("Cannot move this way...\n")
+		}
+		return
+	}
+
+	if canMove == true {
 		worldMap.worldMap[e.position[0]][e.position[1]] = 0
-		e.position[0] += xyMove[0]
-		e.position[1] += xyMove[1]
+		e.position[0] += movementArray[0]
+		e.position[1] += movementArray[1]
 		worldMap.worldMap[e.position[0]][e.position[1]] = e.graphicChar
+		if !e.entityOnBlankTile(worldMap) {
+			if e.name != "enemy" {
+				fmt.Printf("%s on same tile as an enemy\n", e.name)
+			}
+		}
 	}
-	return entityCanMove
 }
 
 func printWorldMap(worldMap *Map) {
@@ -105,30 +119,56 @@ func userInput(acceptableInput []string) string {
 	}
 }
 
-func (e *Entity) randomizeMovement(worldMap *Map, player *Entity) []int {
-	movementArray := []int{-1, 0, 1}
-	x := movementArray[rand.Intn(len(movementArray))]
-	y := movementArray[rand.Intn(len(movementArray))]
-
-	for {
-		if e.position[0]+x < worldMap.areaOfMap[0]-1 || e.position[0]+x > 0 {
-			if e.position[1]+y < worldMap.areaOfMap[1]-1 || e.position[0]+y > 0 {
-				break
-			} else {
-				y = movementArray[rand.Intn(len(movementArray))]
-				continue
-			}
-		} else {
-			x = movementArray[rand.Intn(len(movementArray))]
-			continue
-		}
+func (e *Entity) entityOnBlankTile(worldMap *Map) bool {
+	if worldMap.worldMap[e.position[0]][e.position[1]] != 0 {
+		return false
 	}
 
-	fmt.Println(e.position[0]+x, e.position[1]+y)
+	return true
+}
+
+func (e *Entity) entityOnTile(worldMap *Map) int8 {
+	return worldMap.worldMap[e.position[0]][e.position[1]]
+}
+
+func (e *Entity) entityCollisionDetection(graphicChar int8) {
+	if graphicChar == 2 {
+		fmt.Printf("Two enemies have encountered each other!\n")
+	}
+}
+
+func (e *Entity) randomizeMovement(worldMap *Map) []int {
+	acceptableMovement := []int{-1, 0, 1}
+	x := acceptableMovement[rand.Intn(len(acceptableMovement))]
+	y := acceptableMovement[rand.Intn(len(acceptableMovement))]
+	movementArray := []int{x, y}
+	canMove := e.mapCollisionDetection(worldMap, movementArray)
+	for !canMove {
+		acceptableMovement := []int{-1, 0, 1}
+		x := acceptableMovement[rand.Intn(len(acceptableMovement))]
+		y := acceptableMovement[rand.Intn(len(acceptableMovement))]
+		movementArray := []int{x, y}
+		canMove = e.mapCollisionDetection(worldMap, movementArray)
+	}
+
 	return []int{x, y}
 }
 
+func createEnemies(worldMap *Map) *Entity {
+	enemy := &Entity{
+		name:        "enemy",
+		position:    []int{rand.Intn(worldMap.areaOfMap[0]), rand.Intn(worldMap.areaOfMap[1])},
+		health:      10,
+		damage:      5,
+		graphicChar: 2,
+	}
+
+	return enemy
+}
+
 func main() {
+	enemiesOnMap := []*Entity{}
+
 	xLength := 5
 	yLength := 5
 	worldMap := &Map{
@@ -137,37 +177,35 @@ func main() {
 	}
 
 	player := &Entity{
+		name:        "player",
 		position:    []int{0, 0},
 		health:      10,
 		damage:      5,
 		graphicChar: 1,
 	}
 
-	enemy := &Entity{
-		position:    []int{1, 1},
-		health:      10,
-		damage:      5,
-		graphicChar: 2,
-	}
-
 	fmt.Printf("Adding player value to world map as `1`, at pos (0, 0)\n")
 	player.editPosition(worldMap, []int{0, 0})
 
-	fmt.Printf("Adding enemy value to world map as `2`\n")
-	enemyPos := enemy.randomizeMovement(worldMap, player)
-	enemy.editPosition(worldMap, enemyPos)
+	fmt.Printf("Adding enemy values to world map as `2`\n")
+	for x := 0; x < 2; x++ {
+		enemy := createEnemies(worldMap)
+		enemiesOnMap = append(enemiesOnMap, enemy)
+	}
 
-	fmt.Printf("Starting combat...")
-	fmt.Println("Attacking...\n", player.health, enemy.health)
-	player.attack(enemy)
-	fmt.Println("Damage taken...\n", player.health, enemy.health)
+	for x := range enemiesOnMap {
+		enemyPos := enemiesOnMap[x].randomizeMovement(worldMap)
+		enemiesOnMap[x].editPosition(worldMap, enemyPos)
+	}
 
 	fmt.Printf("Starting loop...\n")
 	fmt.Printf("\n")
 	printWorldMap(worldMap)
 	for {
-		enemyPos = enemy.randomizeMovement(worldMap, player)
-		enemy.editPosition(worldMap, enemyPos)
+		for x := range enemiesOnMap {
+			enemyPos := enemiesOnMap[x].randomizeMovement(worldMap)
+			enemiesOnMap[x].editPosition(worldMap, enemyPos)
+		}
 
 		input := userInput([]string{"north", "south", "east", "west"})
 		if input == "north" {
