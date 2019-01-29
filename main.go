@@ -7,23 +7,21 @@ import (
 	"strings"
 )
 
-type MapLength struct {
-	xLength, yLength int
-}
 type Map struct {
-	worldMap [][]int8
+	areaOfMap []int
+	worldMap  [][]int8
 }
 
 type Entity struct {
 	position       []int
-	graphicalChar  int8
+	graphicChar    int8
 	health, damage int
 }
 
 type CombatEntity interface {
 	attack(CombatEntity)
 	takeDamage(int)
-	editPosition(*Map, int8, []int)
+	editPosition(*Map, []int) bool
 }
 
 func (e *Entity) attack(target CombatEntity) {
@@ -42,16 +40,34 @@ func createWorldMap(xLength int, yLength int) [][]int8 {
 	return worldMap
 }
 
-func (e *Entity) editPosition(worldMap *Map, graphicChar int8, xyMove []int) {
-	worldMap.worldMap[e.position[0]][e.position[1]] = 0
-	e.position[0] += xyMove[0]
-	e.position[1] += xyMove[1]
-	worldMap.worldMap[e.position[0]][e.position[1]] = graphicChar
+func (e *Entity) editPosition(worldMap *Map, xyMove []int) bool {
+	entityCanMove := true
+	fmt.Printf("%d - %d | %d - %d\n", e.position[1], worldMap.areaOfMap[0], e.position[0], worldMap.areaOfMap[1])
+	if e.position[1] > worldMap.areaOfMap[0] || e.position[1] < 0 || e.position[0] > worldMap.areaOfMap[1] || e.position[0] < 0 {
+		entityCanMove := false
+		fmt.Printf("Cannot move this way...\n")
+		return entityCanMove
+	}
+
+	/*if xyMove[0] > worldMap.areaOfMap[0] || xyMove[0] < 0 {
+		fmt.Printf("xymove0")
+		entityCanMove := false
+		fmt.Printf("Cannot move this way...\n")
+		return entityCanMove
+	}*/
+
+	if entityCanMove == true {
+		worldMap.worldMap[e.position[0]][e.position[1]] = 0
+		e.position[0] += xyMove[0]
+		e.position[1] += xyMove[1]
+		worldMap.worldMap[e.position[0]][e.position[1]] = e.graphicChar
+	}
+	return entityCanMove
 }
 
-func printWorldMap(worldMap [][]int8) {
-	for i := range worldMap {
-		fmt.Println(worldMap[i])
+func printWorldMap(worldMap *Map) {
+	for i := range worldMap.worldMap {
+		fmt.Println(worldMap.worldMap[i])
 	}
 	fmt.Printf("\n")
 }
@@ -88,33 +104,30 @@ func userInput(acceptableInput []string) string {
 }
 
 func main() {
-	mapLength := MapLength{
-		xLength: 10,
-		yLength: 10,
-	}
-
+	xLength := 5
+	yLength := 5
 	worldMap := &Map{
-		worldMap: createWorldMap(mapLength.xLength, mapLength.yLength),
+		areaOfMap: []int{xLength, yLength},
+		worldMap:  createWorldMap(xLength, yLength),
 	}
-	printWorldMap(worldMap.worldMap)
 
 	player := &Entity{
-		position:      []int{0, 0},
-		health:        10,
-		damage:        5,
-		graphicalChar: 1,
+		position:    []int{0, 0},
+		health:      10,
+		damage:      5,
+		graphicChar: 1,
 	}
 
 	enemy := &Entity{
-		position:      []int{0, 0},
-		health:        10,
-		damage:        5,
-		graphicalChar: 2,
+		position:    []int{0, 0},
+		health:      10,
+		damage:      5,
+		graphicChar: 2,
 	}
 
-	player.editPosition(worldMap, player.graphicalChar, []int{0, 1})
 	fmt.Printf("Adding player value to world map as `1`, at pos (0, 0)\n")
-	printWorldMap(worldMap.worldMap)
+	//player.editPosition(worldMap, player.graphicalChar, []int{0, 0})
+	worldMap.worldMap[player.position[0]][player.position[1]] = player.graphicChar
 
 	fmt.Printf("Starting combat...")
 	fmt.Println("Attacking...\n", player.health, enemy.health)
@@ -123,17 +136,18 @@ func main() {
 
 	fmt.Printf("Starting loop...\n")
 
+	printWorldMap(worldMap)
 	for {
 		input := userInput([]string{"north", "south", "east", "west"})
 		if input == "north" {
-			player.editPosition(worldMap, player.graphicalChar, []int{-1, 0})
+			player.editPosition(worldMap, []int{-1, 0})
 		} else if input == "south" {
-			player.editPosition(worldMap, player.graphicalChar, []int{1, 0})
+			player.editPosition(worldMap, []int{1, 0})
 		} else if input == "east" {
-			player.editPosition(worldMap, player.graphicalChar, []int{0, 1})
+			player.editPosition(worldMap, []int{0, 1})
 		} else if input == "west" {
-			player.editPosition(worldMap, player.graphicalChar, []int{0, -1})
+			player.editPosition(worldMap, []int{0, -1})
 		}
-		printWorldMap(worldMap.worldMap)
+		printWorldMap(worldMap)
 	}
 }
