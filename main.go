@@ -9,11 +9,14 @@ import (
 	"strings"
 )
 
+// Map describes the current state of the map, e.g., its size, tile elements, etc
 type Map struct {
-	areaOfMap []int
-	worldMap  [][]int8
+	areaOfMap    []int
+	worldMap     [][]int8
+	enemiesOnMap []*Entity
 }
 
+// Entity is the base template for players and elements
 type Entity struct {
 	name           string
 	position       []int
@@ -22,6 +25,7 @@ type Entity struct {
 	hasDied        bool
 }
 
+// CombatEntity relates functions for use with Entities that should be able to access the combat function
 type CombatEntity interface {
 	attack(CombatEntity)
 	takeDamage(int)
@@ -29,6 +33,7 @@ type CombatEntity interface {
 	entityOnBlankTile(*Map, []int) bool
 }
 
+// The Enemy interface is used to describe functions only able to Enemy Entity types
 type Enemy interface {
 	randomizeMovement(*Map, *Entity)
 }
@@ -192,13 +197,12 @@ func createEnemies(worldMap *Map, iterationCount int) *Entity {
 }
 
 func main() {
-	enemiesOnMap := []*Entity{}
-
 	xLength := 5
 	yLength := 5
 	worldMap := &Map{
-		areaOfMap: []int{xLength, yLength},
-		worldMap:  createWorldMap(xLength, yLength),
+		areaOfMap:    []int{xLength, yLength},
+		worldMap:     createWorldMap(xLength, yLength),
+		enemiesOnMap: []*Entity{},
 	}
 
 	player := &Entity{
@@ -212,17 +216,17 @@ func main() {
 	fmt.Printf("Adding enemy values to world map as `2`\n")
 	for x := 0; x < 4; x++ {
 		enemy := createEnemies(worldMap, x)
-		enemiesOnMap = append(enemiesOnMap, enemy)
+		worldMap.enemiesOnMap = append(worldMap.enemiesOnMap, enemy)
 	}
 
-	for x := 0; x < len(enemiesOnMap); x++ {
-		fmt.Println("ENEMY NAME: ", enemiesOnMap[x].name)
-		enemyPos := enemiesOnMap[x].randomizeMovement(worldMap)
-		enemiesOnMap[x].editPosition(worldMap, enemyPos, enemiesOnMap)
+	for x := 0; x < len(worldMap.enemiesOnMap); x++ {
+		fmt.Println("ENEMY NAME: ", worldMap.enemiesOnMap[x].name)
+		enemyPos := worldMap.enemiesOnMap[x].randomizeMovement(worldMap)
+		worldMap.enemiesOnMap[x].editPosition(worldMap, enemyPos, worldMap.enemiesOnMap)
 	}
 
 	fmt.Printf("Adding player value to world map as `1`, at pos (0, 0)\n")
-	player.editPosition(worldMap, []int{0, 0}, enemiesOnMap)
+	player.editPosition(worldMap, []int{0, 0}, worldMap.enemiesOnMap)
 
 	fmt.Printf("Starting loop...\n")
 	fmt.Printf("\n")
@@ -233,23 +237,23 @@ func main() {
 		}
 		input := userInput([]string{"north", "south", "east", "west"})
 		if input == "north" {
-			player.editPosition(worldMap, []int{-1, 0}, enemiesOnMap)
+			player.editPosition(worldMap, []int{-1, 0}, worldMap.enemiesOnMap)
 		} else if input == "south" {
-			player.editPosition(worldMap, []int{1, 0}, enemiesOnMap)
+			player.editPosition(worldMap, []int{1, 0}, worldMap.enemiesOnMap)
 		} else if input == "east" {
-			player.editPosition(worldMap, []int{0, 1}, enemiesOnMap)
+			player.editPosition(worldMap, []int{0, 1}, worldMap.enemiesOnMap)
 		} else if input == "west" {
-			player.editPosition(worldMap, []int{0, -1}, enemiesOnMap)
+			player.editPosition(worldMap, []int{0, -1}, worldMap.enemiesOnMap)
 		}
-		for x := 0; x < len(enemiesOnMap); x++ {
-			if enemiesOnMap[x].hasDied {
-				worldMap.worldMap[enemiesOnMap[x].position[0]][enemiesOnMap[x].position[1]] = player.graphicChar
-				enemiesOnMap = removeEnemyIndex(enemiesOnMap, x)
-				fmt.Println("Combat", len(enemiesOnMap))
+		for x := 0; x < len(worldMap.enemiesOnMap); x++ {
+			if worldMap.enemiesOnMap[x].hasDied {
+				worldMap.worldMap[worldMap.enemiesOnMap[x].position[0]][worldMap.enemiesOnMap[x].position[1]] = player.graphicChar
+				worldMap.enemiesOnMap = removeEnemyIndex(worldMap.enemiesOnMap, x)
+				fmt.Println("Combat", len(worldMap.enemiesOnMap))
 
 			} else {
-				enemyPos := enemiesOnMap[x].randomizeMovement(worldMap)
-				enemiesOnMap[x].editPosition(worldMap, enemyPos, enemiesOnMap)
+				enemyPos := worldMap.enemiesOnMap[x].randomizeMovement(worldMap)
+				worldMap.enemiesOnMap[x].editPosition(worldMap, enemyPos, worldMap.enemiesOnMap)
 			}
 		}
 		printWorldMap(worldMap)
