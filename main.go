@@ -19,6 +19,7 @@ type Entity struct {
 	position       []int
 	graphicChar    int8
 	health, damage int
+	hasDied        bool
 }
 
 type CombatEntity interface {
@@ -53,27 +54,20 @@ func (e *Entity) combat(worldMap *Map, enemy *Entity, enemiesOnMap []*Entity) {
 	for e.health > 0 && enemy.health > 0 {
 		if playerTurn {
 			e.attack(enemy)
-			enemy.takeDamage(e.damage)
 			playerTurn = !playerTurn
 		} else {
 			enemy.attack(e)
-			e.takeDamage(enemy.damage)
 			playerTurn = !playerTurn
 		}
 	}
 	if e.health <= 0 {
 		fmt.Printf("You have died...\n")
+		e.hasDied = true
 	}
 
 	if enemy.health <= 0 {
 		fmt.Printf("Enemy has died...\n")
-		for x := range enemiesOnMap {
-			if enemiesOnMap[x].name == enemy.name {
-				worldMap.worldMap[enemy.position[0]][enemy.position[1]] = 0
-				enemiesOnMap = removeEnemyIndex(enemiesOnMap, x)
-				fmt.Println("Combat", len(enemiesOnMap))
-			}
-		}
+		enemy.hasDied = true
 	}
 }
 
@@ -110,7 +104,6 @@ func userInput(acceptableInput []string) string {
 		} else if len(inputList) == 1 {
 			answer := inputList[0]
 			stringAnswer := string(answer)
-			fmt.Printf("Correct! Your answer was: %v\n", stringAnswer)
 			return stringAnswer
 
 		} else {
@@ -235,6 +228,9 @@ func main() {
 	fmt.Printf("\n")
 	printWorldMap(worldMap)
 	for {
+		if player.hasDied {
+			os.Exit(0)
+		}
 		input := userInput([]string{"north", "south", "east", "west"})
 		if input == "north" {
 			player.editPosition(worldMap, []int{-1, 0}, enemiesOnMap)
@@ -246,8 +242,15 @@ func main() {
 			player.editPosition(worldMap, []int{0, -1}, enemiesOnMap)
 		}
 		for x := 0; x < len(enemiesOnMap); x++ {
-			enemyPos := enemiesOnMap[x].randomizeMovement(worldMap)
-			enemiesOnMap[x].editPosition(worldMap, enemyPos, enemiesOnMap)
+			if enemiesOnMap[x].hasDied {
+				worldMap.worldMap[enemiesOnMap[x].position[0]][enemiesOnMap[x].position[1]] = player.graphicChar
+				enemiesOnMap = removeEnemyIndex(enemiesOnMap, x)
+				fmt.Println("Combat", len(enemiesOnMap))
+
+			} else {
+				enemyPos := enemiesOnMap[x].randomizeMovement(worldMap)
+				enemiesOnMap[x].editPosition(worldMap, enemyPos, enemiesOnMap)
+			}
 		}
 		printWorldMap(worldMap)
 	}
