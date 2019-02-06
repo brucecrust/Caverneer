@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
@@ -18,11 +19,11 @@ type Map struct {
 
 // Entity is the base template for players and elements
 type Entity struct {
-	name           string
-	position       []int
-	graphicChar    int8
-	health, damage int
-	hasDied        bool
+	name                    string
+	position                []int
+	graphicChar             int8
+	health, damage, defense int
+	hasDied                 bool
 }
 
 // CombatEntity relates functions for use with Entities that should be able to access the combat function
@@ -43,7 +44,7 @@ func (e *Entity) attack(target CombatEntity) {
 }
 
 func (e *Entity) takeDamage(damageTaken int) {
-	e.health -= damageTaken
+	e.health -= (damageTaken - (e.defense / 2))
 }
 
 func createWorldMap(xLength int, yLength int) [][]int8 {
@@ -57,14 +58,29 @@ func createWorldMap(xLength int, yLength int) [][]int8 {
 func (e *Entity) combat(worldMap *Map, enemy *Entity, enemiesOnMap []*Entity) {
 	playerTurn := true
 	for e.health > 0 && enemy.health > 0 {
+		fmt.Println("Player health: ", e.health)
+		fmt.Println("Enemy health: ", enemy.health)
+
 		if playerTurn {
-			e.attack(enemy)
+			input := userInput("Please enter combat action: ", []string{"attack", "fortify"})
+			if input == "attack" {
+				e.attack(enemy)
+				fmt.Println(strings.Title(e.name), "has attacked ", enemy.name, "for", e.damage, "points")
+			} else if input == "fortify" {
+				increaseHealth := float64(e.defense * 1.0 / 3)
+				e.health += int(math.Round(increaseHealth))
+				fmt.Println(strings.Title(e.name), "is fortifying to increase health by", increaseHealth, "points")
+			}
+
 			playerTurn = !playerTurn
+
 		} else {
+			fmt.Println(strings.Title(enemy.name), "has attacked", e.name, "for", enemy.damage, "points")
 			enemy.attack(e)
 			playerTurn = !playerTurn
 		}
 	}
+
 	if e.health <= 0 {
 		fmt.Printf("You have died...\n")
 		e.hasDied = true
@@ -88,7 +104,8 @@ func printWorldMap(worldMap *Map) {
 	fmt.Printf("\n")
 }
 
-func userInput(acceptableInput []string) string {
+func userInput(question string, acceptableInput []string) string {
+	fmt.Println(question)
 	for {
 		var inputList []string
 		scanner := bufio.NewScanner(os.Stdin)
@@ -190,6 +207,7 @@ func createEnemies(worldMap *Map, iterationCount int) *Entity {
 		position:    []int{rand.Intn(worldMap.areaOfMap[0]), rand.Intn(worldMap.areaOfMap[1])},
 		health:      10,
 		damage:      5,
+		defense:     2,
 		graphicChar: 2,
 	}
 
@@ -210,6 +228,7 @@ func main() {
 		position:    []int{0, 0},
 		health:      10,
 		damage:      6,
+		defense:     5,
 		graphicChar: 1,
 	}
 
@@ -235,7 +254,7 @@ func main() {
 		if player.hasDied {
 			os.Exit(0)
 		}
-		input := userInput([]string{"north", "south", "east", "west"})
+		input := userInput("Please enter direction to move: ", []string{"north", "south", "east", "west"})
 		if input == "north" {
 			player.editPosition(worldMap, []int{-1, 0}, worldMap.enemiesOnMap)
 		} else if input == "south" {
